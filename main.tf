@@ -102,8 +102,8 @@ resource "aws_lambda_function" "add_product" {
   role          = aws_iam_role.lambda_execution_role.arn
   memory_size   = 1024
 
-  filename         = "../lambda-functions/target/product-lambda.jar"
-  source_code_hash = filebase64sha256("../lambda-functions/target/product-lambda.jar")
+  filename         = "product-lambda.jar"
+  source_code_hash = filebase64sha256("product-lambda.jar")
 
 }
 
@@ -114,8 +114,8 @@ resource "aws_lambda_function" "get_product" {
   role          = aws_iam_role.lambda_execution_role.arn
   memory_size   = 1024
 
-  filename         = "../lambda-functions/target/product-lambda.jar"
-  source_code_hash = filebase64sha256("../lambda-functions/target/product-lambda.jar")
+  filename         = "product-lambda.jar"
+  source_code_hash = filebase64sha256("product-lambda.jar")
 
 }
 
