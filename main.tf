@@ -32,11 +32,11 @@ resource "aws_iam_role" "lambda_execution_role" {
   name = "productRole"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action    = "sts:AssumeRole"
+        Effect    = "Allow"
         Principal = {
           Service = "lambda.amazonaws.com"
         }
@@ -50,7 +50,7 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
   description = "IAM policy for accessing DynamoDB from Lambda"
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
         Action = [
@@ -70,11 +70,11 @@ resource "aws_iam_policy" "lambda_cloudwatch_policy" {
   description = "IAM policy for Lambda to log to CloudWatch"
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -94,6 +94,70 @@ resource "aws_iam_role_policy_attachment" "lambda_dynamodb_access" {
   role       = aws_iam_role.lambda_execution_role.name
   policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
+
+resource "aws_api_gateway_account" "apigw_cloudwatch_account" {
+  cloudwatch_role_arn = "${aws_iam_role.apigw_cloudwatch_role.arn}"
+}
+
+resource "aws_iam_role" "apigw_cloudwatch_role" {
+  name = "api_gateway_cloudwatch_global"
+
+  assume_role_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "",
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "apigateway.amazonaws.com"
+        },
+        "Action" : "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "apigw_cloudwatch_role_policy" {
+  name = "default"
+  role = "${aws_iam_role.apigw_cloudwatch_role.id}"
+
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents"
+        ],
+        "Resource" : "*"
+      }
+    ]
+  })
+}
+
+resource "aws_api_gateway_method_settings" "general_settings" {
+  rest_api_id = "${aws_api_gateway_rest_api.api.id}"
+  stage_name  = "${aws_api_gateway_deployment.api_deployment.stage_name}"
+  method_path = "*/*"
+
+  settings {
+    # Enable CloudWatch logging and metrics
+    metrics_enabled        = true
+    data_trace_enabled     = true
+    logging_level          = "INFO"
+
+    # Limit the rate of calls to prevent abuse and unwanted charges
+    throttling_rate_limit  = 100
+    throttling_burst_limit = 50
+  }
+}
+
 
 resource "aws_lambda_function" "add_product" {
   function_name = "add-product"
@@ -177,7 +241,7 @@ resource "aws_lambda_permission" "allow_get_product_from_apigateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.get_product.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/productApi*"
+  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/productApi*"
 }
 
 resource "aws_lambda_permission" "allow_add_product_from_apigateway" {
